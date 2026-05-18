@@ -1,0 +1,8 @@
+com\booksphere\notificationservice\ApplicationTest.class
+com\booksphere\notificationservice\ApplicationMainTest.class
+com\booksphere\notificationservice\service\EmailServiceTest.class
+com\booksphere\notificationservice\service\NotificationServiceTest.class
+com\booksphere\notificationservice\NotificationServiceApplicationTests.class
+com\booksphere\notificationservice\consumer\RabbitMQConsumerTest.class
+com\booksphere\notificationservice\model\ModelTest.class
+com\booksphere\notificationservice\PojosTest.class

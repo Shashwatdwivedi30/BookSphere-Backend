@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RabbitMQConsumer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">notification-service</a> &gt; <a href="index.source.html" class="el_package">com.booksphere.notificationservice.consumer</a> &gt; <span class="el_source">RabbitMQConsumer.java</span></div><h1>RabbitMQConsumer.java</h1><pre class="source lang-java linenums">package com.booksphere.notificationservice.consumer;
+
+import com.booksphere.notificationservice.dto.NotificationEvent;
+import com.booksphere.notificationservice.model.Notification;
+import com.booksphere.notificationservice.service.EmailService;
+import com.booksphere.notificationservice.service.NotificationService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+
+@Service
+<span class="fc" id="L14">@Slf4j</span>
+<span class="fc" id="L15">public class RabbitMQConsumer {</span>
+
+    @Autowired
+    private NotificationService notificationService;
+
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    @RabbitListener(queues = {&quot;${rabbitmq.queue.name}&quot;})
+    public void consume(NotificationEvent event) {
+<span class="fc" id="L28">        log.info(&quot;Received notification event from RabbitMQ: {}&quot;, event);</span>
+
+        try {
+            // 1. Save to Database
+<span class="fc" id="L32">            Notification notification = new Notification();</span>
+<span class="fc" id="L33">            notification.setUserId(event.getUserId());</span>
+<span class="fc" id="L34">            notification.setMessage(event.getMessage());</span>
+<span class="fc" id="L35">            notification.setType(event.getType());</span>
+<span class="fc" id="L36">            Notification savedNotification = notificationService.sendNotification(notification);</span>
+
+            // 2. Push via WebSockets for Real-time UI
+<span class="fc" id="L39">            pushToWebsocket(event, savedNotification);</span>
+
+            // 3. Send Email (Optional - don't crash if it fails)
+<span class="fc" id="L42">            sendEmailIfPossible(event);</span>
+            
+<span class="fc" id="L44">        } catch (Exception e) {</span>
+<span class="fc" id="L45">            log.error(&quot;Error processing notification event: {}&quot;, e.getMessage());</span>
+<span class="fc" id="L46">        }</span>
+<span class="fc" id="L47">    }</span>
+
+    private void pushToWebsocket(NotificationEvent event, Notification savedNotification) {
+        try {
+<span class="fc" id="L51">            messagingTemplate.convertAndSend(&quot;/topic/notifications/&quot; + event.getUserId(), savedNotification);</span>
+<span class="fc" id="L52">        } catch (Exception wsEx) {</span>
+<span class="fc" id="L53">            log.warn(&quot;WebSocket push failed: {}&quot;, wsEx.getMessage());</span>
+<span class="fc" id="L54">        }</span>
+<span class="fc" id="L55">    }</span>
+
+    private void sendEmailIfPossible(NotificationEvent event) {
+        try {
+<span class="fc bfc" id="L59" title="All 2 branches covered.">            String userName = event.getUserName() != null ? event.getUserName() : &quot;Reader&quot;;</span>
+<span class="fc" id="L60">            String subject = getSubject(event.getType());</span>
+<span class="fc" id="L61">            String personalizedMessage = &quot;Hello &quot; + userName + &quot;,\n\n&quot; + event.getMessage();</span>
+<span class="fc" id="L62">            emailService.sendEmail(event.getUserEmail(), subject, personalizedMessage);</span>
+<span class="fc" id="L63">        } catch (Exception emailEx) {</span>
+<span class="fc" id="L64">            log.warn(&quot;Email sending failed: {}&quot;, emailEx.getMessage());</span>
+<span class="fc" id="L65">        }</span>
+<span class="fc" id="L66">    }</span>
+
+    private String getSubject(String type) {
+<span class="fc bfc" id="L69" title="All 2 branches covered.">        if (type == null) return &quot;BookSphere Notification&quot;;</span>
+<span class="fc bfc" id="L70" title="All 5 branches covered.">        switch (type) {</span>
+            case &quot;ORDER_PLACED&quot;:
+<span class="fc" id="L72">                return &quot;BookSphere: Order Placed Successfully&quot;;</span>
+            case &quot;ORDER_PAID&quot;:
+<span class="fc" id="L74">                return &quot;BookSphere: Payment Received&quot;;</span>
+            case &quot;ORDER_CANCELLED&quot;:
+<span class="fc" id="L76">                return &quot;BookSphere: Order Cancelled&quot;;</span>
+            case &quot;PASSWORD_RESET&quot;:
+<span class="fc" id="L78">                return &quot;BookSphere: Password Reset OTP&quot;;</span>
+            default:
+<span class="fc" id="L80">                return &quot;BookSphere Notification&quot;;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
