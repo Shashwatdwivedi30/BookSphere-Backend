@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RabbitMQConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">order-service</a> &gt; <a href="index.source.html" class="el_package">com.booksphere.orderservice.config</a> &gt; <span class="el_source">RabbitMQConfig.java</span></div><h1>RabbitMQConfig.java</h1><pre class="source lang-java linenums">package com.booksphere.orderservice.config;
+
+import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+<span class="fc" id="L13">public class RabbitMQConfig {</span>
+
+    @Value(&quot;${rabbitmq.queue.name}&quot;)
+    private String queue;
+
+    @Value(&quot;${rabbitmq.exchange.name}&quot;)
+    private String exchange;
+
+    @Value(&quot;${rabbitmq.routing.key}&quot;)
+    private String routingKey;
+
+    @Bean
+    public Queue queue() {
+<span class="fc" id="L26">        return new Queue(queue);</span>
+    }
+
+    @Bean
+    public TopicExchange exchange() {
+<span class="fc" id="L31">        return new TopicExchange(exchange);</span>
+    }
+
+    @Bean
+    public Binding binding() {
+<span class="fc" id="L36">        return BindingBuilder</span>
+<span class="fc" id="L37">                .bind(queue())</span>
+<span class="fc" id="L38">                .to(exchange())</span>
+<span class="fc" id="L39">                .with(routingKey);</span>
+    }
+
+    @Bean
+    public MessageConverter converter() {
+<span class="fc" id="L44">        return new Jackson2JsonMessageConverter();</span>
+    }
+
+    @Bean
+    public AmqpTemplate amqpTemplate(ConnectionFactory connectionFactory) {
+<span class="fc" id="L49">        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);</span>
+<span class="fc" id="L50">        rabbitTemplate.setMessageConverter(converter());</span>
+<span class="fc" id="L51">        return rabbitTemplate;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

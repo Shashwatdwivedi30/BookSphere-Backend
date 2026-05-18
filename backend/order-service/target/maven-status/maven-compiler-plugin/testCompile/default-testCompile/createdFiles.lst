@@ -1,0 +1,8 @@
+com\booksphere\orderservice\ApplicationMainTest.class
+com\booksphere\orderservice\service\OrderServiceTest.class
+com\booksphere\orderservice\ExceptionTest.class
+com\booksphere\orderservice\PojosTest.class
+com\booksphere\orderservice\ApplicationTest.class
+com\booksphere\orderservice\controller\OrderControllerTest.class
+com\booksphere\orderservice\model\ModelTest.class
+com\booksphere\orderservice\OrderServiceApplicationTests.class

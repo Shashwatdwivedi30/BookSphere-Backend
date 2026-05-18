@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">order-service</a> &gt; <a href="index.source.html" class="el_package">com.booksphere.orderservice.controller</a> &gt; <span class="el_source">OrderController.java</span></div><h1>OrderController.java</h1><pre class="source lang-java linenums">package com.booksphere.orderservice.controller;
+
+import com.booksphere.orderservice.dto.OrderDTO;
+import com.booksphere.orderservice.dto.OrderItemDTO;
+import com.booksphere.orderservice.dto.AddressDTO;
+import com.booksphere.orderservice.model.Order;
+import com.booksphere.orderservice.model.OrderItem;
+import com.booksphere.orderservice.model.Address;
+import com.booksphere.orderservice.service.OrderService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;/orders&quot;)
+<span class="fc" id="L18">public class OrderController {</span>
+
+    @Autowired
+    private OrderService orderService;
+
+    @PostMapping(&quot;/place&quot;)
+    public OrderDTO placeOrder(@RequestBody OrderDTO orderDto) {
+<span class="fc" id="L25">        return convertToDTO(orderService.placeOrder(convertToEntity(orderDto)));</span>
+    }
+
+    @PostMapping(&quot;/pay&quot;)
+    public OrderDTO payOrder(@RequestParam String orderId, @RequestParam String modeOfPayment, @RequestParam Double amount) {
+<span class="fc" id="L30">        return convertToDTO(orderService.payOrder(orderId, modeOfPayment, amount));</span>
+    }
+
+    @GetMapping(&quot;/user/{userId:.+}&quot;)
+    public List&lt;OrderDTO&gt; getOrdersByUser(@PathVariable String userId) {
+<span class="fc" id="L35">        return orderService.getOrdersByUser(userId).stream()</span>
+<span class="fc" id="L36">                .map(this::convertToDTO)</span>
+<span class="fc" id="L37">                .collect(Collectors.toList());</span>
+    }
+
+    @PutMapping(&quot;/status&quot;)
+    public OrderDTO updateOrderStatus(@RequestParam String orderId, @RequestParam String status) {
+<span class="fc" id="L42">        return convertToDTO(orderService.updateOrderStatus(orderId, status));</span>
+    }
+
+    @GetMapping(&quot;/all&quot;)
+    public List&lt;OrderDTO&gt; getAllOrders() {
+<span class="fc" id="L47">        return orderService.getAllOrders().stream()</span>
+<span class="fc" id="L48">                .map(this::convertToDTO)</span>
+<span class="fc" id="L49">                .collect(Collectors.toList());</span>
+    }
+
+    private OrderDTO convertToDTO(Order order) {
+<span class="fc bfc" id="L53" title="All 2 branches covered.">        if (order == null) return null;</span>
+<span class="fc" id="L54">        return OrderDTO.builder()</span>
+<span class="fc" id="L55">                .orderId(order.getOrderId())</span>
+<span class="fc" id="L56">                .userId(order.getUserId())</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">                .items(order.getItems() != null ? order.getItems().stream()</span>
+<span class="fc" id="L58">                        .map(this::convertItemToDTO)</span>
+<span class="fc" id="L59">                        .collect(Collectors.toList()) : null)</span>
+<span class="fc" id="L60">                .totalPrice(order.getTotalPrice())</span>
+<span class="fc" id="L61">                .orderStatus(order.getOrderStatus())</span>
+<span class="fc" id="L62">                .modeOfPayment(order.getModeOfPayment())</span>
+<span class="fc" id="L63">                .shippingAddress(convertAddressToDTO(order.getShippingAddress()))</span>
+<span class="fc" id="L64">                .createdAt(order.getCreatedAt())</span>
+<span class="fc" id="L65">                .build();</span>
+    }
+
+    private Order convertToEntity(OrderDTO dto) {
+<span class="fc bfc" id="L69" title="All 2 branches covered.">        if (dto == null) return null;</span>
+<span class="fc" id="L70">        Order order = new Order();</span>
+<span class="fc" id="L71">        order.setOrderId(dto.getOrderId());</span>
+<span class="fc" id="L72">        order.setUserId(dto.getUserId());</span>
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">        order.setItems(dto.getItems() != null ? dto.getItems().stream()</span>
+<span class="fc" id="L74">                .map(this::convertItemToEntity)</span>
+<span class="pc" id="L75">                .collect(Collectors.toList()) : null);</span>
+<span class="fc" id="L76">        order.setTotalPrice(dto.getTotalPrice());</span>
+<span class="fc" id="L77">        order.setOrderStatus(dto.getOrderStatus());</span>
+<span class="fc" id="L78">        order.setModeOfPayment(dto.getModeOfPayment());</span>
+<span class="fc" id="L79">        order.setShippingAddress(convertAddressToEntity(dto.getShippingAddress()));</span>
+<span class="fc" id="L80">        order.setCreatedAt(dto.getCreatedAt());</span>
+<span class="fc" id="L81">        return order;</span>
+    }
+
+    private OrderItemDTO convertItemToDTO(OrderItem item) {
+<span class="pc bpc" id="L85" title="1 of 2 branches missed.">        if (item == null) return null;</span>
+<span class="fc" id="L86">        return OrderItemDTO.builder()</span>
+<span class="fc" id="L87">                .bookId(item.getBookId())</span>
+<span class="fc" id="L88">                .title(item.getTitle())</span>
+<span class="fc" id="L89">                .price(item.getPrice())</span>
+<span class="fc" id="L90">                .quantity(item.getQuantity())</span>
+<span class="fc" id="L91">                .imageUrl(item.getImageUrl())</span>
+<span class="fc" id="L92">                .isbn(item.getIsbn())</span>
+<span class="fc" id="L93">                .build();</span>
+    }
+
+    private OrderItem convertItemToEntity(OrderItemDTO dto) {
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">        if (dto == null) return null;</span>
+<span class="fc" id="L98">        OrderItem item = new OrderItem();</span>
+<span class="fc" id="L99">        item.setBookId(dto.getBookId());</span>
+<span class="fc" id="L100">        item.setTitle(dto.getTitle());</span>
+<span class="fc" id="L101">        item.setPrice(dto.getPrice());</span>
+<span class="fc" id="L102">        item.setQuantity(dto.getQuantity());</span>
+<span class="fc" id="L103">        item.setImageUrl(dto.getImageUrl());</span>
+<span class="fc" id="L104">        item.setIsbn(dto.getIsbn());</span>
+<span class="fc" id="L105">        return item;</span>
+    }
+
+    private AddressDTO convertAddressToDTO(Address address) {
+<span class="fc bfc" id="L109" title="All 2 branches covered.">        if (address == null) return null;</span>
+<span class="fc" id="L110">        return AddressDTO.builder()</span>
+<span class="fc" id="L111">                .id(address.getId())</span>
+<span class="fc" id="L112">                .orderCustomerId(address.getCustomerId())</span>
+<span class="fc" id="L113">                .receiverName(address.getFullName())</span>
+<span class="fc" id="L114">                .receiverMobile(address.getMobileNumber())</span>
+<span class="fc" id="L115">                .completeAddress(address.getFullAddress())</span>
+<span class="fc" id="L116">                .cityName(address.getCity())</span>
+<span class="fc" id="L117">                .stateName(address.getState())</span>
+<span class="fc" id="L118">                .postalCode(address.getPincode())</span>
+<span class="fc" id="L119">                .build();</span>
+    }
+
+    private Address convertAddressToEntity(AddressDTO dto) {
+<span class="pc bpc" id="L123" title="1 of 2 branches missed.">        if (dto == null) return null;</span>
+<span class="fc" id="L124">        Address address = new Address();</span>
+<span class="fc" id="L125">        address.setId(dto.getId());</span>
+<span class="fc" id="L126">        address.setCustomerId(dto.getOrderCustomerId());</span>
+<span class="fc" id="L127">        address.setFullName(dto.getReceiverName());</span>
+<span class="fc" id="L128">        address.setMobileNumber(dto.getReceiverMobile());</span>
+<span class="fc" id="L129">        address.setFullAddress(dto.getCompleteAddress());</span>
+<span class="fc" id="L130">        address.setCity(dto.getCityName());</span>
+<span class="fc" id="L131">        address.setState(dto.getStateName());</span>
+<span class="fc" id="L132">        address.setPincode(dto.getPostalCode());</span>
+<span class="fc" id="L133">        return address;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

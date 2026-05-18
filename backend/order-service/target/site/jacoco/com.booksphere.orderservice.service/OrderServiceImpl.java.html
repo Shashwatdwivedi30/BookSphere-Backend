@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">order-service</a> &gt; <a href="index.source.html" class="el_package">com.booksphere.orderservice.service</a> &gt; <span class="el_source">OrderServiceImpl.java</span></div><h1>OrderServiceImpl.java</h1><pre class="source lang-java linenums">package com.booksphere.orderservice.service;
+
+import com.booksphere.orderservice.dto.NotificationEvent;
+import com.booksphere.orderservice.exception.OrderException;
+import com.booksphere.orderservice.exception.OrderNotFoundException;
+import com.booksphere.orderservice.model.Order;
+import com.booksphere.orderservice.repository.OrderRepository;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+@Service
+<span class="fc" id="L23">@Slf4j</span>
+<span class="fc" id="L24">public class OrderServiceImpl implements OrderService {</span>
+
+    private static final String STATUS_CANCELLED = &quot;CANCELLED&quot;;
+    private static final String STATUS_PAID = &quot;PAID&quot;;
+    private static final String STATUS_DELIVERED = &quot;DELIVERED&quot;;
+    private static final String ORDER_NOT_FOUND = &quot;Order not found&quot;;
+
+    @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    @Value(&quot;${rabbitmq.exchange.name}&quot;)
+    private String exchange;
+
+    @Value(&quot;${rabbitmq.routing.key}&quot;)
+    private String routingKey;
+
+<span class="fc" id="L46">    private static final List&lt;String&gt; BOOK_SERVICE_BASE_URLS = Arrays.asList(</span>
+            &quot;http://book-service&quot;,
+            &quot;http://localhost:8081&quot;
+    );
+
+    @Override
+    public Order placeOrder(Order order) {
+<span class="pc bpc" id="L53" title="1 of 2 branches missed.">        if (order.getItems() != null) {</span>
+<span class="fc" id="L54">            order.getItems().forEach(item -&gt; {</span>
+<span class="fc" id="L55">                Integer stock = fetchBookStock(item.getBookId());</span>
+<span class="fc bfc" id="L56" title="All 2 branches covered.">                if (stock == null) {</span>
+<span class="fc" id="L57">                    throw new OrderException(&quot;Unable to verify stock for book: &quot; + item.getTitle());</span>
+                }
+<span class="fc bfc" id="L59" title="All 2 branches covered.">                if (stock &lt; item.getQuantity()) {</span>
+<span class="fc" id="L60">                    throw new OrderException(&quot;Insufficient stock for &quot; + item.getTitle() + &quot;. Available: &quot; + stock);</span>
+                }
+<span class="fc" id="L62">            });</span>
+        }
+
+<span class="pc bpc" id="L65" title="3 of 4 branches missed.">        if (order.getOrderStatus() == null || order.getOrderStatus().isEmpty()) {</span>
+<span class="fc" id="L66">            order.setOrderStatus(&quot;PENDING&quot;);</span>
+        }
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">        if (order.getCreatedAt() == null) {</span>
+<span class="fc" id="L69">            order.setCreatedAt(LocalDateTime.now());</span>
+        }
+        
+<span class="fc" id="L72">        Order savedOrder = orderRepository.save(order);</span>
+        
+        // Reduce stock for each item
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">        if (order.getItems() != null) {</span>
+<span class="fc" id="L76">            order.getItems().forEach(item -&gt; {</span>
+<span class="fc" id="L77">                log.info(&quot;Reducing stock for book: {} by {}&quot;, item.getBookId(), item.getQuantity());</span>
+<span class="fc" id="L78">                callBookServicePut(&quot;/books/reduce-stock/&quot; + item.getBookId() + &quot;/&quot; + item.getQuantity(),</span>
+<span class="fc" id="L79">                        &quot;reduce stock for book &quot; + item.getBookId());</span>
+<span class="fc" id="L80">            });</span>
+        }
+        
+<span class="fc" id="L83">        sendNotification(savedOrder, &quot;ORDER_PLACED&quot;);</span>
+<span class="fc" id="L84">        return savedOrder;</span>
+    }
+
+    @Override
+    public Order payOrder(String orderId, String modeOfPayment, Double amount) {
+<span class="fc" id="L89">        Order order = orderRepository.findById(orderId)</span>
+<span class="pc" id="L90">                .orElseThrow(() -&gt; new OrderNotFoundException(ORDER_NOT_FOUND));</span>
+        
+        // Mode of payment WALLET integration will be added here when WalletService is ready
+        
+<span class="fc" id="L94">        order.setModeOfPayment(modeOfPayment);</span>
+<span class="fc" id="L95">        order.setTotalPrice(amount);</span>
+<span class="fc" id="L96">        order.setOrderStatus(STATUS_PAID);</span>
+<span class="fc" id="L97">        Order savedOrder = orderRepository.save(order);</span>
+<span class="fc" id="L98">        sendNotification(savedOrder, &quot;ORDER_PAID&quot;);</span>
+<span class="fc" id="L99">        return savedOrder;</span>
+    }
+
+    @Override
+    public List&lt;Order&gt; getOrdersByUser(String userId) {
+<span class="fc" id="L104">        return orderRepository.findByUserId(userId);</span>
+    }
+
+    @Override
+    public Order updateOrderStatus(String orderId, String status) {
+<span class="fc" id="L109">        Order order = orderRepository.findById(orderId)</span>
+<span class="pc" id="L110">                .orElseThrow(() -&gt; new OrderNotFoundException(ORDER_NOT_FOUND));</span>
+
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        if (STATUS_CANCELLED.equalsIgnoreCase(status)) {</span>
+<span class="fc" id="L113">            handleCancellation(order);</span>
+        }
+
+<span class="fc" id="L116">        order.setOrderStatus(status);</span>
+<span class="fc" id="L117">        Order savedOrder = orderRepository.save(order);</span>
+<span class="fc bfc" id="L118" title="All 2 branches covered.">        if (STATUS_CANCELLED.equalsIgnoreCase(status)) {</span>
+<span class="fc" id="L119">            sendNotification(savedOrder, &quot;ORDER_CANCELLED&quot;);</span>
+        }
+<span class="fc" id="L121">        return savedOrder;</span>
+    }
+
+    private void handleCancellation(Order order) {
+<span class="pc bpc" id="L125" title="1 of 2 branches missed.">        String currentStatus = order.getOrderStatus() == null ? &quot;&quot; : order.getOrderStatus().toUpperCase();</span>
+<span class="fc bfc" id="L126" title="All 2 branches covered.">        if (STATUS_CANCELLED.equals(currentStatus)) {</span>
+<span class="fc" id="L127">            return;</span>
+        }
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        if (STATUS_DELIVERED.equals(currentStatus)) {</span>
+<span class="fc" id="L130">            throw new OrderException(&quot;Delivered orders cannot be cancelled&quot;);</span>
+        }
+<span class="pc bpc" id="L132" title="1 of 2 branches missed.">        if (order.getItems() != null) {</span>
+<span class="fc" id="L133">            order.getItems().forEach(item -&gt; {</span>
+                try {
+<span class="fc" id="L135">                    log.info(&quot;Restoring stock for cancelled book: {} by {}&quot;, item.getBookId(), item.getQuantity());</span>
+<span class="fc" id="L136">                    callBookServicePut(&quot;/books/increase-stock/&quot; + item.getBookId() + &quot;/&quot; + item.getQuantity(),</span>
+<span class="fc" id="L137">                            &quot;restore stock for book &quot; + item.getBookId());</span>
+<span class="fc" id="L138">                    log.info(&quot;Successfully restored stock for book: {}&quot;, item.getBookId());</span>
+<span class="nc" id="L139">                } catch (Exception e) {</span>
+<span class="nc" id="L140">                    log.error(&quot;Failed to restore stock for book: {}. Reason: {}&quot;, item.getBookId(), e.getMessage());</span>
+<span class="fc" id="L141">                }</span>
+<span class="fc" id="L142">            });</span>
+        }
+<span class="fc" id="L144">    }</span>
+
+    @Override
+    public List&lt;Order&gt; getAllOrders() {
+<span class="fc" id="L148">        return orderRepository.findAll();</span>
+    }
+
+    private void sendNotification(Order order, String type) {
+<span class="fc bfc" id="L152" title="All 2 branches covered.">        String shortId = order.getOrderId().length() &gt; 8 </span>
+<span class="fc" id="L153">            ? order.getOrderId().substring(order.getOrderId().length() - 8) </span>
+<span class="fc" id="L154">            : order.getOrderId();</span>
+        
+<span class="fc" id="L156">        String message = getNotificationMessage(type, shortId);</span>
+
+<span class="fc" id="L158">        NotificationEvent event = NotificationEvent.builder()</span>
+<span class="fc" id="L159">                .orderId(order.getOrderId())</span>
+<span class="fc" id="L160">                .userId(order.getUserId())</span>
+<span class="pc bpc" id="L161" title="1 of 2 branches missed.">                .userName(order.getShippingAddress() != null ? order.getShippingAddress().getFullName() : &quot;Reader&quot;)</span>
+<span class="fc" id="L162">                .userEmail(order.getUserId()) // Based on frontend, userId IS the email</span>
+<span class="fc" id="L163">                .message(message)</span>
+<span class="fc" id="L164">                .type(type)</span>
+<span class="fc" id="L165">                .amount(order.getTotalPrice())</span>
+<span class="fc" id="L166">                .build();</span>
+
+        try {
+<span class="fc" id="L169">            log.info(&quot;Sending notification event to RabbitMQ: {}&quot;, event);</span>
+<span class="fc" id="L170">            rabbitTemplate.convertAndSend(exchange, routingKey, event);</span>
+<span class="nc" id="L171">        } catch (Exception e) {</span>
+<span class="nc" id="L172">            log.error(&quot;Failed to send notification to RabbitMQ: {}&quot;, e.getMessage());</span>
+<span class="fc" id="L173">        }</span>
+<span class="fc" id="L174">    }</span>
+
+    private String getNotificationMessage(String type, String shortId) {
+<span class="pc bpc" id="L177" title="1 of 4 branches missed.">        switch (type) {</span>
+            case &quot;ORDER_PLACED&quot;:
+<span class="fc" id="L179">                return &quot;Your order #&quot; + shortId + &quot; has been placed successfully!&quot;;</span>
+            case &quot;ORDER_PAID&quot;:
+<span class="fc" id="L181">                return &quot;Payment received for order #&quot; + shortId + &quot;. We are preparing your books!&quot;;</span>
+            case &quot;ORDER_CANCELLED&quot;:
+<span class="fc" id="L183">                return &quot;Your order #&quot; + shortId + &quot; has been cancelled.&quot;;</span>
+            default:
+<span class="nc" id="L185">                return &quot;Notification for order #&quot; + shortId;</span>
+        }
+    }
+
+    private Integer fetchBookStock(String bookId) {
+<span class="fc" id="L190">        Exception last = null;</span>
+<span class="fc bfc" id="L191" title="All 2 branches covered.">        for (String baseUrl : BOOK_SERVICE_BASE_URLS) {</span>
+            try {
+<span class="fc" id="L193">                Map&lt;String, Object&gt; book = restTemplate.getForObject(baseUrl + &quot;/books/&quot; + bookId, Map.class);</span>
+<span class="pc bpc" id="L194" title="2 of 4 branches missed.">                if (book == null || book.get(&quot;stock&quot;) == null) {</span>
+<span class="nc" id="L195">                    return null;</span>
+                }
+<span class="fc" id="L197">                return ((Number) book.get(&quot;stock&quot;)).intValue();</span>
+<span class="fc" id="L198">            } catch (Exception ex) {</span>
+<span class="fc" id="L199">                last = ex;</span>
+            }
+<span class="fc" id="L201">        }</span>
+<span class="pc bpc" id="L202" title="1 of 2 branches missed.">        if (last != null) {</span>
+<span class="fc" id="L203">            log.error(&quot;Failed to fetch stock for book: {}. Reason: {}&quot;, bookId, last.getMessage());</span>
+        }
+<span class="fc" id="L205">        return null;</span>
+    }
+
+    private void callBookServicePut(String path, String actionLabel) {
+<span class="fc" id="L209">        Exception last = null;</span>
+<span class="pc bpc" id="L210" title="1 of 2 branches missed.">        for (String baseUrl : BOOK_SERVICE_BASE_URLS) {</span>
+            try {
+<span class="fc" id="L212">                String url = baseUrl + path;</span>
+<span class="fc" id="L213">                restTemplate.exchange(url, HttpMethod.PUT, HttpEntity.EMPTY, Void.class);</span>
+<span class="fc" id="L214">                return;</span>
+<span class="nc" id="L215">            } catch (Exception ex) {</span>
+<span class="nc" id="L216">                last = ex;</span>
+            }
+<span class="nc" id="L218">        }</span>
+<span class="nc bnc" id="L219" title="All 2 branches missed.">        throw new OrderException(&quot;Failed to &quot; + actionLabel + &quot; (book-service unreachable): &quot; + (last != null ? last.getMessage() : &quot;Unknown error&quot;));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
