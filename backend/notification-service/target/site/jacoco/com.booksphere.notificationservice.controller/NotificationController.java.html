@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotificationController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">notification-service</a> &gt; <a href="index.source.html" class="el_package">com.booksphere.notificationservice.controller</a> &gt; <span class="el_source">NotificationController.java</span></div><h1>NotificationController.java</h1><pre class="source lang-java linenums">package com.booksphere.notificationservice.controller;
+
+import com.booksphere.notificationservice.dto.NotificationDTO;
+import com.booksphere.notificationservice.model.Notification;
+import com.booksphere.notificationservice.service.NotificationService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;/notifications&quot;)
+<span class="fc" id="L14">public class NotificationController {</span>
+
+    @Autowired
+    private NotificationService notificationService;
+
+    @PostMapping(&quot;/send&quot;)
+    public NotificationDTO sendNotification(@RequestBody NotificationDTO notificationDto) {
+<span class="fc" id="L21">        return convertToDTO(notificationService.sendNotification(convertToEntity(notificationDto)));</span>
+    }
+
+    @GetMapping(&quot;/user/{userId:.+}&quot;)
+    public List&lt;NotificationDTO&gt; getUserNotifications(@PathVariable String userId) {
+<span class="fc" id="L26">        return notificationService.getUserNotifications(userId).stream()</span>
+<span class="fc" id="L27">                .map(this::convertToDTO)</span>
+<span class="fc" id="L28">                .collect(Collectors.toList());</span>
+    }
+
+    @PutMapping(&quot;/read/{id}&quot;)
+    public NotificationDTO markAsRead(@PathVariable String id) {
+<span class="fc" id="L33">        return convertToDTO(notificationService.markAsRead(id));</span>
+    }
+
+    @PutMapping(&quot;/read-all/{userId:.+}&quot;)
+    public void markAllAsRead(@PathVariable String userId) {
+<span class="nc" id="L38">        notificationService.markAllAsRead(userId);</span>
+<span class="nc" id="L39">    }</span>
+
+    private NotificationDTO convertToDTO(Notification notification) {
+<span class="pc bpc" id="L42" title="1 of 2 branches missed.">        if (notification == null) return null;</span>
+<span class="fc" id="L43">        return NotificationDTO.builder()</span>
+<span class="fc" id="L44">                .id(notification.getId())</span>
+<span class="fc" id="L45">                .userId(notification.getUserId())</span>
+<span class="fc" id="L46">                .message(notification.getMessage())</span>
+<span class="fc" id="L47">                .type(notification.getType())</span>
+<span class="fc" id="L48">                .isRead(notification.getIsRead())</span>
+<span class="fc" id="L49">                .timestamp(notification.getTimestamp())</span>
+<span class="fc" id="L50">                .build();</span>
+    }
+
+    private Notification convertToEntity(NotificationDTO dto) {
+<span class="pc bpc" id="L54" title="1 of 2 branches missed.">        if (dto == null) return null;</span>
+<span class="fc" id="L55">        Notification notification = new Notification();</span>
+<span class="fc" id="L56">        notification.setId(dto.getId());</span>
+<span class="fc" id="L57">        notification.setUserId(dto.getUserId());</span>
+<span class="fc" id="L58">        notification.setMessage(dto.getMessage());</span>
+<span class="fc" id="L59">        notification.setType(dto.getType());</span>
+<span class="fc" id="L60">        notification.setIsRead(dto.getIsRead());</span>
+<span class="fc" id="L61">        notification.setTimestamp(dto.getTimestamp());</span>
+<span class="fc" id="L62">        return notification;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

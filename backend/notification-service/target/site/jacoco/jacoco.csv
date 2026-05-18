@@ -1,0 +1,13 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+notification-service,com.booksphere.notificationservice.config,WebSocketConfig,0,40,0,0,0,8,0,3,0,3
+notification-service,com.booksphere.notificationservice.config,RabbitMQConfig,0,7,0,0,0,2,0,2,0,2
+notification-service,com.booksphere.notificationservice.consumer,RabbitMQConsumer,0,117,0,9,0,34,0,12,0,6
+notification-service,com.booksphere.notificationservice.service,EmailService,0,41,0,0,0,13,0,3,0,3
+notification-service,com.booksphere.notificationservice.service,NotificationServiceImpl,23,46,2,2,5,10,4,5,2,5
+notification-service,com.booksphere.notificationservice.dto,NotificationEvent.NotificationEventBuilder,51,21,0,0,0,1,8,2,8,2
+notification-service,com.booksphere.notificationservice.dto,NotificationDTO.NotificationDTOBuilder,15,49,0,0,0,1,1,8,1,8
+notification-service,com.booksphere.notificationservice.dto,NotificationEvent,115,228,44,18,0,11,25,27,0,21
+notification-service,com.booksphere.notificationservice.dto,NotificationDTO,51,250,26,28,1,9,20,26,1,18
+notification-service,com.booksphere.notificationservice.controller,NotificationController,9,86,2,2,2,24,3,6,1,6
+notification-service,com.booksphere.notificationservice,NotificationServiceApplication,0,8,0,0,0,3,0,2,0,2
+notification-service,com.booksphere.notificationservice.model,Notification,52,253,28,26,0,9,20,25,0,18

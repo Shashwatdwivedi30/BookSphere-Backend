@@ -1,0 +1,14 @@
+com\booksphere\notificationservice\model\Notification.class
+com\booksphere\notificationservice\config\RabbitMQConfig.class
+com\booksphere\notificationservice\dto\NotificationEvent$NotificationEventBuilder.class
+com\booksphere\notificationservice\service\NotificationService.class
+com\booksphere\notificationservice\consumer\RabbitMQConsumer.class
+com\booksphere\notificationservice\controller\NotificationController.class
+com\booksphere\notificationservice\repository\NotificationRepository.class
+com\booksphere\notificationservice\service\EmailService.class
+com\booksphere\notificationservice\config\WebSocketConfig.class
+com\booksphere\notificationservice\dto\NotificationDTO.class
+com\booksphere\notificationservice\NotificationServiceApplication.class
+com\booksphere\notificationservice\dto\NotificationDTO$NotificationDTOBuilder.class
+com\booksphere\notificationservice\service\NotificationServiceImpl.class
+com\booksphere\notificationservice\dto\NotificationEvent.class

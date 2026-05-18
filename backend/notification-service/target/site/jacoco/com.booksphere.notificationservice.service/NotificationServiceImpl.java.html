@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotificationServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">notification-service</a> &gt; <a href="index.source.html" class="el_package">com.booksphere.notificationservice.service</a> &gt; <span class="el_source">NotificationServiceImpl.java</span></div><h1>NotificationServiceImpl.java</h1><pre class="source lang-java linenums">package com.booksphere.notificationservice.service;
+
+import com.booksphere.notificationservice.model.Notification;
+import com.booksphere.notificationservice.repository.NotificationRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+<span class="fc" id="L12">public class NotificationServiceImpl implements NotificationService {</span>
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Override
+    public Notification sendNotification(Notification notification) {
+<span class="pc bpc" id="L19" title="1 of 2 branches missed.">        if (notification.getTimestamp() == null) {</span>
+<span class="fc" id="L20">            notification.setTimestamp(LocalDateTime.now());</span>
+        }
+<span class="pc bpc" id="L22" title="1 of 2 branches missed.">        if (notification.getIsRead() == null) {</span>
+<span class="nc" id="L23">            notification.setIsRead(false);</span>
+        }
+<span class="fc" id="L25">        return notificationRepository.save(notification);</span>
+    }
+
+    @Override
+    public List&lt;Notification&gt; getUserNotifications(String userId) {
+<span class="fc" id="L30">        return notificationRepository.findByUserId(userId);</span>
+    }
+
+    @Override
+    public Notification markAsRead(String id) {
+<span class="fc" id="L35">        Notification notification = notificationRepository.findById(id)</span>
+<span class="fc" id="L36">                .orElseThrow(() -&gt; new RuntimeException(&quot;Notification not found&quot;));</span>
+<span class="fc" id="L37">        notification.setIsRead(true);</span>
+<span class="fc" id="L38">        return notificationRepository.save(notification);</span>
+    }
+
+    @Override
+    public void markAllAsRead(String userId) {
+<span class="nc" id="L43">        List&lt;Notification&gt; unread = notificationRepository.findByUserIdAndIsReadFalse(userId);</span>
+<span class="nc" id="L44">        unread.forEach(note -&gt; note.setIsRead(true));</span>
+<span class="nc" id="L45">        notificationRepository.saveAll(unread);</span>
+<span class="nc" id="L46">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
